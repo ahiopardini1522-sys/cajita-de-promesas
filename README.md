@@ -6,7 +6,7 @@ bíblica (Reina-Valera 1960) al azar.
 ## Etapas
 1. **Base + cajita animada** ✅
 2. **57 promesas con reflexión + una promesa por día** ✅
-3. Crear imagen de la promesa y guardarla en la galería
+3. **Crear imagen de la promesa, guardarla y compartirla** ✅
 4. Historial de favoritas
 
 ## Cómo obtener el APK (sin compilar en la compu)

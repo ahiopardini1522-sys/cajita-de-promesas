@@ -8,6 +8,7 @@ import '../datos/almacen_promesas.dart';
 import '../utilidades/fecha.dart';
 import '../widgets/cajita.dart';
 import '../widgets/papelito.dart';
+import 'pantalla_imagen.dart';
 
 class PantallaCajita extends StatefulWidget {
   const PantallaCajita({super.key});
@@ -91,6 +92,17 @@ class _PantallaCajitaState extends State<PantallaCajita>
     } finally {
       _ocupado = false;
     }
+  }
+
+  void _crearImagen() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PantallaImagen(
+          promesa: _mostrada.promesa,
+          color: _mostrada.color,
+        ),
+      ),
+    );
   }
 
   void _verReflexion() {
@@ -336,7 +348,20 @@ class _PantallaCajitaState extends State<PantallaCajita>
                                   backgroundColor: Cajita.dorado,
                                   foregroundColor: const Color(0xFF3B2A20),
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 22,
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
+                              FilledButton.icon(
+                                onPressed: _crearImagen,
+                                icon: const Icon(Icons.image_rounded),
+                                label: const Text('Imagen'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Cajita.rojoOscuro,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
                                     vertical: 14,
                                   ),
                                 ),
@@ -349,7 +374,7 @@ class _PantallaCajitaState extends State<PantallaCajita>
                                   backgroundColor: Cajita.rojoOscuro,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 22,
+                                    horizontal: 16,
                                     vertical: 14,
                                   ),
                                 ),
