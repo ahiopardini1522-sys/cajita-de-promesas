@@ -51,11 +51,13 @@ class PapelitoDesenrollable extends StatelessWidget {
     required this.promesa,
     required this.color,
     required this.progreso,
+    required this.fecha,
   });
 
   final Promesa promesa;
   final Color color;
   final double progreso;
+  final String fecha;
 
   static const double ancho = 300;
 
@@ -72,7 +74,7 @@ class PapelitoDesenrollable extends StatelessWidget {
             child: Align(
               alignment: Alignment.topCenter,
               heightFactor: t,
-              child: _Hoja(promesa: promesa, color: color),
+              child: _Hoja(promesa: promesa, color: color, fecha: fecha),
             ),
           ),
           _Rodillo(color: color, ancho: ancho + 16),
@@ -113,10 +115,15 @@ class _Rodillo extends StatelessWidget {
 }
 
 class _Hoja extends StatelessWidget {
-  const _Hoja({required this.promesa, required this.color});
+  const _Hoja({
+    required this.promesa,
+    required this.color,
+    required this.fecha,
+  });
 
   final Promesa promesa;
   final Color color;
+  final String fecha;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +146,7 @@ class _Hoja extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '✦  PROMESA PARA HOY  ✦',
+            '✦  PROMESA DE HOY  ✦',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -147,6 +154,12 @@ class _Hoja extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: _oscurecer(color, 0.55),
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            fecha,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: _oscurecer(color, 0.45)),
           ),
           const SizedBox(height: 16),
           Text(

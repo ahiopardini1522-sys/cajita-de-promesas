@@ -4,7 +4,8 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../datos/promesas.dart';
+import '../datos/almacen_promesas.dart';
+import '../utilidades/fecha.dart';
 import '../widgets/cajita.dart';
 import '../widgets/papelito.dart';
 
@@ -24,9 +25,10 @@ class _PantallaCajitaState extends State<PantallaCajita>
   late final Animation<double> _desenrollar;
   late final Animation<double> _botones;
 
-  final _azar = math.Random();
-  Promesa _promesa = promesasDeMuestra.first;
-  Color _color = coloresPapelitos.first;
+  final _almacen = AlmacenPromesas();
+  PromesaDelDia? _hoy;
+  PromesaDelDia _mostrada = const PromesaDelDia(indice: 0, indiceColor: 0);
+  bool _ocupado = false;
 
   @override
   void initState() {
@@ -56,6 +58,13 @@ class _PantallaCajitaState extends State<PantallaCajita>
       parent: _anim,
       curve: const Interval(0.9, 1.0),
     );
+    _cargarHoy();
+  }
+
+  Future<void> _cargarHoy() async {
+    final hoy = await _almacen.promesaDeHoy();
+    if (!mounted) return;
+    setState(() => _hoy = hoy);
   }
 
   @override
@@ -65,14 +74,126 @@ class _PantallaCajitaState extends State<PantallaCajita>
     super.dispose();
   }
 
-  void _sacarPromesa() {
-    if (!_anim.isDismissed) return;
+  Future<void> _tocarCajita() async {
+    if (!_anim.isDismissed || _ocupado) return;
+    _ocupado = true;
     HapticFeedback.mediumImpact();
-    setState(() {
-      _promesa = promesasDeMuestra[_azar.nextInt(promesasDeMuestra.length)];
-      _color = coloresPapelitos[_azar.nextInt(coloresPapelitos.length)];
-    });
-    _anim.forward();
+    try {
+      // Si hoy ya salió una, se vuelve a mostrar la misma.
+      final yaSalio = await _almacen.promesaDeHoy();
+      final elegida = yaSalio ?? await _almacen.sacarPromesaNueva();
+      if (!mounted) return;
+      setState(() {
+        _hoy = elegida;
+        _mostrada = elegida;
+      });
+      _anim.forward();
+    } finally {
+      _ocupado = false;
+    }
+  }
+
+  void _verReflexion() {
+    final promesa = _mostrada.promesa;
+    final color = _mostrada.color;
+    final oscuro = Color.lerp(color, Colors.black, 0.5)!;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFFFFBF5),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final medidas = MediaQuery.of(context);
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: medidas.size.height * 0.8),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              12,
+              24,
+              28 + medidas.padding.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Icon(Icons.menu_book_rounded, color: oscuro),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reflexión',
+                      style: TextStyle(
+                        fontFamily: 'serif',
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: oscuro,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color.lerp(color, Colors.white, 0.65),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '“${promesa.texto}”',
+                        style: const TextStyle(
+                          fontFamily: 'serif',
+                          fontSize: 17,
+                          height: 1.4,
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFF3B2A20),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        promesa.cita,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: oscuro,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  promesa.explicacion,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    height: 1.55,
+                    color: Color(0xFF3B2A20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _volverALaCajita() {
@@ -126,7 +247,7 @@ class _PantallaCajitaState extends State<PantallaCajita>
                       bottom: margenInferior,
                       child: Center(
                         child: GestureDetector(
-                          onTap: _sacarPromesa,
+                          onTap: _tocarCajita,
                           child: Transform.scale(
                             scale: respiro,
                             alignment: Alignment.bottomCenter,
@@ -143,10 +264,13 @@ class _PantallaCajitaState extends State<PantallaCajita>
                       bottom: 26,
                       child: Opacity(
                         opacity: (1 - _anim.value * 4).clamp(0.0, 1.0),
-                        child: const Text(
-                          'Tocá la cajita para sacar tu promesa',
+                        child: Text(
+                          _hoy == null
+                              ? 'Tocá la cajita para sacar tu promesa de hoy'
+                              : 'Ya sacaste tu promesa de hoy.\n'
+                                  'Tocá la cajita para volver a leerla.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 15,
                             color: Color(0xFF8A5A44),
                             fontWeight: FontWeight.w500,
@@ -180,9 +304,10 @@ class _PantallaCajitaState extends State<PantallaCajita>
                               scale: lerpDouble(0.22, 1.0, tSalida)!,
                               alignment: Alignment.topCenter,
                               child: PapelitoDesenrollable(
-                                promesa: _promesa,
-                                color: _color,
+                                promesa: _mostrada.promesa,
+                                color: _mostrada.color,
                                 progreso: _desenrollar.value,
+                                fecha: fechaEnEspanol(DateTime.now()),
                               ),
                             ),
                           ),
@@ -198,20 +323,38 @@ class _PantallaCajitaState extends State<PantallaCajita>
                         ignoring: _anim.value < 1,
                         child: Opacity(
                           opacity: _botones.value,
-                          child: Center(
-                            child: FilledButton.icon(
-                              onPressed: _volverALaCajita,
-                              icon: const Icon(Icons.inventory_2_outlined),
-                              label: const Text('Volver a la cajita'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Cajita.rojoOscuro,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 14,
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 10,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: _verReflexion,
+                                icon: const Icon(Icons.menu_book_rounded),
+                                label: const Text('Reflexión'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Cajita.dorado,
+                                  foregroundColor: const Color(0xFF3B2A20),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 22,
+                                    vertical: 14,
+                                  ),
                                 ),
                               ),
-                            ),
+                              FilledButton.icon(
+                                onPressed: _volverALaCajita,
+                                icon: const Icon(Icons.inventory_2_outlined),
+                                label: const Text('Volver'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Cajita.rojoOscuro,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 22,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

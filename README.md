@@ -4,8 +4,8 @@ App personal: una cajita con papelitos de colores; cada día sacás una promesa
 bíblica (Reina-Valera 1960) al azar.
 
 ## Etapas
-1. **Base + cajita animada** ✅ (esta versión)
-2. Lista de promesas con explicación + una promesa por día
+1. **Base + cajita animada** ✅
+2. **57 promesas con reflexión + una promesa por día** ✅
 3. Crear imagen de la promesa y guardarla en la galería
 4. Historial de favoritas
 
